@@ -29,8 +29,6 @@ public class Player implements Serializable {
     private Profession profession;
 
     @Column(name = "birthday")
-    //@Column(name = "birthday", columnDefinition = "TIMESTAMP")
-    //@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private Date birthday;
 
     @Column(name = "banned")

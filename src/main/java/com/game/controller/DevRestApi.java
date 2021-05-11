@@ -18,38 +18,41 @@ import java.util.List;
 @RequestMapping("/rest/")
 public class DevRestApi {
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
-
+    private final Logger logger;
     private final PlayerService playerService;
 
     @Autowired
     public DevRestApi(PlayerService playerService) {
+        this.logger = LoggerFactory.getLogger(this.getClass());
         this.playerService = playerService;
     }
 
     @GetMapping("players/{id}")
     public ResponseEntity<Player> getPlayerById(@PathVariable Long id) {
-        if (id < 1) {
+        try {
+            Player player = playerService.getPlayerById(id);
+            if (player != null) {
+                return new ResponseEntity<>(player, HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(null, HttpStatus.resolve(404));
+            }
+        } catch (BadRequestException e) {
+            logger.info(e.getMessage());
             return new ResponseEntity<>(null, HttpStatus.resolve(400));
-        }
-        Player player = playerService.getPlayerById(id);
-        if (player != null) {
-            return new ResponseEntity<>(player, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(null, HttpStatus.resolve(404));
         }
     }
 
     @DeleteMapping("players/{id}")
     public ResponseEntity<Integer> deletePlayerById(@PathVariable Long id) {
-        if (id < 1) {
+        try {
+            if (playerService.deletePlayerById(id) == 1) {
+                return new ResponseEntity<>(null, HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(null, HttpStatus.resolve(404));
+            }
+        }catch (BadRequestException e){
+            logger.info(e.getMessage());
             return new ResponseEntity<>(null, HttpStatus.resolve(400));
-        }
-
-        if (playerService.deletePlayerById(id) == 1) {
-            return new ResponseEntity<>(null, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(null, HttpStatus.resolve(404));
         }
     }
 
@@ -109,30 +112,10 @@ public class DevRestApi {
                         minLevel, maxLevel, order, pageNumber, pageSize);
 
         return new ResponseEntity<>(players, HttpStatus.OK);
-/*
-        if (pageSize == null) {
-            Pageable paging = PageRequest.of(0, 3, Sort.by(PlayerOrder.ID.getFieldName()));
-            //return new ResponseEntity<List<Player>>(playersRepo.findAll(paging).toList(), HttpStatus.OK);
-            //return new ResponseEntity<>(myDao.select(3), HttpStatus.OK);
-            return new ResponseEntity<>(myDao.exampleCriteriaPaging(), HttpStatus.OK);
-        }
-        Pageable paging = PageRequest.of(pageNumber,pageSize, Sort.by(order.getFieldName()));
-        if (after != null ) {
-            Date startDate = new Date(after);
-        }
-        if (before != null){
-            Date stopDate = new Date(before);
-        }
-
-        *//*if (name!= null && title != null && race != null) {
-            Specification<Player> specifications = Specification.where(PlayerSpecification.containsName(name).and(PlayerSpecification.hasRace(race)));
-            return new ResponseEntity<List<Player>>(playersRepo.findAll(specifications,paging).toList(), HttpStatus.OK);
-        }
-        */
     }
 
     @PostMapping(value = "players/", consumes = "application/json")
-    public ResponseEntity<Player> setPlayer(@RequestBody Player player) {
+    public ResponseEntity<Player> addPlayer(@RequestBody Player player) {
         try {
             return new ResponseEntity<>(playerService.createAndAddPlayer(player), HttpStatus.OK);
         } catch (BadRequestException e) {

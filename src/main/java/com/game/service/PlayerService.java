@@ -5,7 +5,7 @@ import com.game.entity.Player;
 import com.game.entity.Profession;
 import com.game.entity.Race;
 import com.game.exception.BadRequestException;
-import com.game.repository.MyDaoImpl;
+import com.game.repository.PlayerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,17 +17,20 @@ import java.util.List;
 @Service
 public class PlayerService {
 
-    private final MyDaoImpl myDao;
+    private final PlayerRepository playersRepo;
 
     @Autowired
-    public PlayerService(MyDaoImpl myDao) {
-        this.myDao = myDao;
+    public PlayerService(PlayerRepository playersRepo) {
+        this.playersRepo = playersRepo;
     }
 
     public List<Player> getAllPlayersWithFilter(String name, String title, Race race, Profession profession, Long after, Long before, Boolean banned, Integer minExperience, Integer maxExperience, Integer minLevel, Integer maxLevel, PlayerOrder order, Integer pageNumber, Integer pageSize) {
-        return myDao.getPlayers(name, title, race, profession, after, before, banned, minExperience, maxExperience, minLevel, maxLevel, order, pageNumber, pageSize);
+        return playersRepo.getPlayers(name, title, race, profession, after, before, banned, minExperience, maxExperience, minLevel, maxLevel, order, pageNumber, pageSize);
     }
 
+    public Integer getAllPlayersCountWithFilter(String name, String title, Race race, Profession profession, Long after, Long before, Boolean banned, Integer minExperience, Integer maxExperience, Integer minLevel, Integer maxLevel) {
+        return Math.toIntExact(playersRepo.getPlayersCount(name, title, race, profession, after, before, banned, minExperience, maxExperience, minLevel, maxLevel));
+    }
 
     public Player createAndAddPlayer(Player player) throws BadRequestException {
         String name = player.getName();
@@ -39,20 +42,18 @@ public class PlayerService {
             throw new BadRequestException("Data Params IllegalArgumentException");
         }
 
-        if (name.length() > 12 || title.length() > 30) {
-            throw new BadRequestException("name or title IllegalArgumentException");
+        if (name.length() > 12 || name.equals("")) {
+            throw new BadRequestException("name IllegalArgumentException");
         }
-        if (name.equals("")) {
-            throw new BadRequestException("name or title IllegalArgumentException");
+        if ( title.length() > 30) {
+            throw new BadRequestException("title IllegalArgumentException");
         }
 
         if (experience > 10000000 || experience < 0) {
             throw new BadRequestException("experience IllegalArgumentException");
         }
 
-        LocalDate localDate = date.toInstant()
-                .atZone(ZoneId.systemDefault())
-                .toLocalDate();
+        LocalDate localDate = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
 
         if (localDate.getYear() < 2000 || localDate.getYear() > 3000) {
             throw new BadRequestException("birthday IllegalArgumentException");
@@ -62,8 +63,7 @@ public class PlayerService {
         int untilNextLevel = getUntilNextLevel(experience, currentLevel);
         player.setLevel(currentLevel);
         player.setUntilNextLevel(untilNextLevel);
-
-        return myDao.savePlayer(player);
+        return playersRepo.save(player);
     }
 
     private int getUntilNextLevel(Integer experience, int currentLevel) {
@@ -80,62 +80,76 @@ public class PlayerService {
             throw new BadRequestException("id < 1 IllegalArgumentException");
         }
 
-        if (player == null){
-            List<Player> players = myDao.getPlayerById(id);
-            return players.size() > 0 ? players.get(0): null;
+        if (player == null) {
+            return playersRepo.getById(id);
         }
+
+        Player playerToUpdate = playersRepo.getById(id);
+        if (playerToUpdate == null) return null;
 
         String name = player.getName();
         String title = player.getTitle();
         Integer experience = player.getExperience();
         Date date = player.getBirthday();
+        Race race = player.getRace();
+        Profession profession = player.getProfession();
+        Boolean banned = player.getBanned();
 
-        if (name == null && date == null && title == null && experience == null && player.getRace() == null && player.getProfession() == null) {
-            List<Player> players = myDao.getPlayerById(id);
-            return players.size() > 0 ? players.get(0): null;
+        if (name == null && date == null && title == null && experience == null && race == null && profession == null && banned == null) {
+            return playersRepo.getById(id);
         }
 
-
-        if (name != null && (name.length() > 12 || name.equals(""))) {
-            throw new BadRequestException(String.format("name ={%s} IllegalArgumentException", name));
+        if (name != null) {
+            if (name.length() > 12 || name.equals(""))
+                throw new BadRequestException(String.format("name ={%s} IllegalArgumentException", name));
+            playerToUpdate.setName(name);
         }
 
-        if (title != null && title.length() > 30) {
-            throw new BadRequestException("name or title IllegalArgumentException");
+        if (title != null) {
+            if (title.length() > 30)
+                throw new BadRequestException("name or title IllegalArgumentException");
+            playerToUpdate.setTitle(title);
         }
 
-        if (experience != null && (experience > 10000000 || experience < 0)) {
-            throw new BadRequestException("experience IllegalArgumentException");
-        }else if( experience != null){
+        if (race != null) {
+            playerToUpdate.setRace(race);
+        }
+        if (profession != null) {
+            playerToUpdate.setProfession(profession);
+        }
+        if (banned != null) {
+            playerToUpdate.setBanned(banned);
+        }
+
+        if (experience != null) {
+            if (experience > 10000000 || experience < 0)
+                throw new BadRequestException("experience IllegalArgumentException");
             int currentLevel = getCurrentLevel(experience);
             int untilNextLevel = getUntilNextLevel(experience, currentLevel);
-            player.setLevel(currentLevel);
-            player.setUntilNextLevel(untilNextLevel);
+            playerToUpdate.setExperience(experience);
+            playerToUpdate.setLevel(currentLevel);
+            playerToUpdate.setUntilNextLevel(untilNextLevel);
         }
 
         if (date != null) {
-            LocalDate localDate = date.toInstant()
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDate();
-
+            LocalDate localDate = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
             if (localDate.getYear() < 2000 || localDate.getYear() > 3000) {
                 throw new BadRequestException("birthday IllegalArgumentException");
+            } else {
+                playerToUpdate.setBirthday(date);
             }
         }
-        return myDao.updatePlayer(id, player);
+        return playersRepo.save(playerToUpdate);
     }
 
-    public Integer getAllPlayersCountWithFilter(String name, String title, Race race, Profession profession, Long after, Long before, Boolean banned, Integer minExperience, Integer maxExperience, Integer minLevel, Integer maxLevel) {
-        return Math.toIntExact( myDao.getPlayersCount(name, title, race, profession, after, before, banned, minExperience, maxExperience, minLevel, maxLevel));
+
+    public Integer deletePlayerById(Long id) throws BadRequestException {
+        if (id < 1) throw new BadRequestException("id < 1");
+        return playersRepo.deletePlayerById(id);
     }
 
-    public Integer deletePlayerById(Long id) {
-        return myDao.deletePlayerById(id);
-    }
-
-    public Player getPlayerById(Long id) {
-        List<Player> players = myDao.getPlayerById(id);
-        if (players.size() == 0) {return null;}
-        return players.get(0);
+    public Player getPlayerById(Long id) throws BadRequestException {
+        if (id < 1) throw new BadRequestException("id < 1");
+        return playersRepo.getById(id);
     }
 }

@@ -98,8 +98,7 @@ public class UpdatePlayerTest extends AbstractTest {
         PlayerInfoTest actual = mapper.readValue(contentAsString, PlayerInfoTest.class);
 
         assertNotEquals("При запросе POST /rest/players/{id} поле id не должно обновляться.", 8, actual.id);
-        System.out.println("actual :" + actual.birthday.toString());
-        System.out.println("expected :" + expected.birthday.toString());
+
         assertEquals("При запросе POST /rest/players/{id} с id в теле запроса, должны быть обновлены поля, кроме поля id", expected, actual);
 
     }
@@ -135,16 +134,6 @@ public class UpdatePlayerTest extends AbstractTest {
         String contentAsString = resultActions.andReturn().getResponse().getContentAsString();
         PlayerInfoTest actual = mapper.readValue(contentAsString, PlayerInfoTest.class);
 
-        System.out.println(expected.id +" " + actual.id);
-        System.out.println(expected.name+" " + actual.name);
-        System.out.println(expected.title+" " + actual.title);
-        System.out.println(expected.birthday+" " + actual.birthday);
-        System.out.println(expected.level+" " + actual.level);
-        System.out.println(expected.experience+" " + actual.experience);
-        System.out.println(expected.untilNextLevel+" " + actual.untilNextLevel);
-        System.out.println(expected.profession+" " + actual.profession);
-        System.out.println(expected.race+" " + actual.race);
-
         assertEquals("При запросе POST /rest/players/{id} с level в теле запроса, должны быть обновлены поля, кроме поля level", expected, actual);
     }
 
@@ -167,6 +156,7 @@ public class UpdatePlayerTest extends AbstractTest {
 
         String contentAsString = resultActions.andReturn().getResponse().getContentAsString();
         PlayerInfoTest actual = mapper.readValue(contentAsString, PlayerInfoTest.class);
+
         assertEquals("При запросе POST /rest/players/{id} игрок должен обновляться, а рейтинг и остаток до следующего уровня пересчитываться", expected, actual);
     }
 
